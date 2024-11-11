@@ -1,6 +1,7 @@
 #include <mutex>
 #include <thread>
 #include <unistd.h>
+#include <string>
 
 #include <argparse/argparse.hpp>
 #include <led-matrix.h>
@@ -17,11 +18,12 @@
 int max_brightness = 100;
 std::string frame_endpoint;
 std::string control_endpoint;
+std::string pixel_mapper;
+std::string hardware_mapping;
 
 rgb_matrix::RGBMatrix::Options matrix_opts;
 rgb_matrix::RuntimeOptions matrix_runtime_opts;
 rgb_matrix::RGBMatrix *matrix;
-std::string matrix_opts_pixel_mapper;
 
 std::mutex matrix_mutex;
 std::tuple<int, int, int> color_temp_current = {255, 255, 255};
@@ -36,7 +38,9 @@ void setup(int argc, char *argv[]) {
   parser.add_argument("--cols").default_value(32).scan<'i', int>();
   parser.add_argument("--chain-length").default_value(1).scan<'i', int>();
   parser.add_argument("--parallel").default_value(1).scan<'i', int>();
-  parser.add_argument("--pixel-mapper");
+
+  parser.add_argument("--pixel-mapper").default_value(std::string{"U-Mapper"});
+  parser.add_argument("--hardware-mapping").default_value(std::string{"adafruit-hat-pwm"});
 
   parser.add_argument("--pwm-lsb-ns").default_value(100).scan<'i', int>();
   parser.add_argument("--pwm-bits").default_value(11).scan<'i', int>();
@@ -45,6 +49,7 @@ void setup(int argc, char *argv[]) {
 
   parser.add_argument("--limit-hz").default_value(180).scan<'i', int>();
   parser.add_argument("--show-hz").default_value(false).implicit_value(true);
+  parser.add_argument("--busy-waiting").default_value(false).implicit_value(true);
 
   parser.add_argument("--max-brightness")
       .help("Maximum brightness level (0-100)")
@@ -65,10 +70,18 @@ void setup(int argc, char *argv[]) {
   matrix_opts.chain_length = parser.get<int>("--chain-length");
   matrix_opts.parallel = parser.get<int>("--parallel");
 
-  if (parser.present("--pixel-mapper")) {
-    matrix_opts_pixel_mapper = parser.get<std::string>("--pixel-mapper");
-    matrix_opts.pixel_mapper_config = matrix_opts_pixel_mapper.c_str();
+  /* if (parser.present("--pixel-mapper")) {
+   matrix_opts.pixel_mapper_config = parser.get("pixel-mapper").c_str();
   }
+  if (parser.present("--hardware-mapping")) {
+   matrix_opts.hardware_mapping = parser.get("hardware-mapping").c_str();
+  } */
+  pixel_mapper = parser.get("--pixel-mapper");
+  matrix_opts.pixel_mapper_config = pixel_mapper.c_str();
+  PLOG_INFO << "Setting pixel_mapper_config to: " << matrix_opts.pixel_mapper_config;
+  hardware_mapping = parser.get("--hardware-mapping");
+  matrix_opts.hardware_mapping = hardware_mapping.c_str();
+  PLOG_INFO << "Setting hardware_mapping to: " << matrix_opts.hardware_mapping;
 
   matrix_opts.pwm_lsb_nanoseconds = parser.get<int>("--pwm-lsb-ns");
   matrix_opts.pwm_bits = parser.get<int>("--pwm-bits");
@@ -76,6 +89,7 @@ void setup(int argc, char *argv[]) {
 
   matrix_opts.limit_refresh_rate_hz = parser.get<int>("--limit-hz");
   matrix_opts.show_refresh_rate = parser.get<bool>("--show-hz");
+  matrix_opts.disable_busy_waiting = parser.get<bool>("--busy-waiting");
 
   max_brightness = parser.get<int>("--max-brightness");
   matrix_opts.brightness = max_brightness;
@@ -115,6 +129,8 @@ void frame_loop() {
     if (req.size() != expected_frame_size) {
       PLOG_ERROR << "Received frame of unexpected size: " << req.size();
       continue;
+    } else {
+      PLOG_INFO << "Received frame of size: "<< req.size();
     }
 
     const std::lock_guard<std::mutex> guard(matrix_mutex);
