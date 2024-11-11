@@ -70,12 +70,6 @@ void setup(int argc, char *argv[]) {
   matrix_opts.chain_length = parser.get<int>("--chain-length");
   matrix_opts.parallel = parser.get<int>("--parallel");
 
-  /* if (parser.present("--pixel-mapper")) {
-   matrix_opts.pixel_mapper_config = parser.get("pixel-mapper").c_str();
-  }
-  if (parser.present("--hardware-mapping")) {
-   matrix_opts.hardware_mapping = parser.get("hardware-mapping").c_str();
-  } */
   pixel_mapper = parser.get("--pixel-mapper");
   matrix_opts.pixel_mapper_config = pixel_mapper.c_str();
   PLOG_INFO << "Setting pixel_mapper_config to: " << matrix_opts.pixel_mapper_config;
@@ -129,9 +123,10 @@ void frame_loop() {
     if (req.size() != expected_frame_size) {
       PLOG_ERROR << "Received frame of unexpected size: " << req.size();
       continue;
-    } else {
+    } 
+    /* else {
       PLOG_INFO << "Received frame of size: "<< req.size();
-    }
+    } */
 
     const std::lock_guard<std::mutex> guard(matrix_mutex);
     const auto data = static_cast<const uint32_t *>(req.data());
