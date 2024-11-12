@@ -7,7 +7,7 @@ Type=simple
 User=root
 Group=root
 WorkingDirectory=/home/led/git/led-matrix-zmq-server/scripts/
-ExecStart=/usr/bin/screen -S zmqserver -dm /home/led/git/led-matrix-zmq-server/scripts/run-server.sh
+ExecStart=/home/led/git/led-matrix-zmq-server/scripts/run-server.sh
 Restart=always
 RestartSec=10
 
