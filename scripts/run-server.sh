@@ -10,8 +10,9 @@ sudo ../build/led-matrix-zmq-server \
 	--gpio-slowdown 3 \
 	--frame-endpoint "tcp://*:55000" \
 	--control-endpoint "tcp://*:55001" \
-	--pwm-bits 8 \
-	--limit-hz 120 \
+	--pwm-bits 6 \
 	--max-brightness 100 \
-	--busy-waiting 
-	#--show-hz \
+	--busy-waiting \
+	--pwm-lsb-ns 300 \
+	--show-hz
+	#--limit-hz 30 \

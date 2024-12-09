@@ -24,6 +24,7 @@ std::string hardware_mapping;
 rgb_matrix::RGBMatrix::Options matrix_opts;
 rgb_matrix::RuntimeOptions matrix_runtime_opts;
 rgb_matrix::RGBMatrix *matrix;
+rgb_matrix::FrameCanvas *offscreen;
 
 std::mutex matrix_mutex;
 std::tuple<int, int, int> color_temp_current = {255, 255, 255};
@@ -98,9 +99,12 @@ void setup(int argc, char *argv[]) {
   const std::lock_guard<std::mutex> guard(matrix_mutex);
   matrix = rgb_matrix::CreateMatrixFromOptions(matrix_opts, matrix_runtime_opts);
   matrix->set_luminance_correct(true);
+
+  offscreen = matrix->CreateFrameCanvas();  
 }
 
 void frame_loop() {
+
   const auto matrix_width = matrix->width();
   const auto matrix_height = matrix->height();
   const std::size_t expected_frame_size = matrix_width * matrix_height * consts::BPP;
@@ -121,7 +125,7 @@ void frame_loop() {
     sock.send(rep, zmq::send_flags::none);
 
     if (req.size() != expected_frame_size) {
-      PLOG_ERROR << "Received frame of unexpected size: " << req.size();
+      PLOG_ERROR << "Received frame of unexpected size: " << req.size() << " Expected: " << expected_frame_size;
       continue;
     } 
     /* else {
@@ -141,9 +145,13 @@ void frame_loop() {
         g = (g * std::get<1>(color_temp_current)) / 255;
         b = (b * std::get<2>(color_temp_current)) / 255;
 
-        matrix->SetPixel(x, y, r, g, b);
+        //matrix->SetPixel(x, y, r, g, b);
+        offscreen->SetPixel(x, y, r, g, b);
       }
     }
+
+    // Atomic swap with double buffer
+    offscreen = matrix->SwapOnVSync(offscreen);
   }
 }
 

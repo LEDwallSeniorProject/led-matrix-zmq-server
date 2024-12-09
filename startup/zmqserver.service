@@ -10,6 +10,7 @@ WorkingDirectory=/home/led/git/led-matrix-zmq-server/scripts/
 ExecStart=/home/led/git/led-matrix-zmq-server/scripts/run-server.sh
 Restart=always
 RestartSec=10
+Nice=-10
 
 [Install]
 WantedBy=multi-user.target
